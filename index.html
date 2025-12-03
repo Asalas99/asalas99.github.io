@@ -37,11 +37,26 @@
           <input type="hidden" id="ind_id" />
           <label>Fecha: <input type="date" id="ind_date" required></label>
           <label>Deporte: <input type="text" id="ind_sport" placeholder="NBA, NFL..." required></label>
-          <label>Equipo / Jugador: <input type="text" id="ind_team" required></label>
-          <label>Tipo de apuesta: <input type="text" id="ind_type" placeholder="ML, ALT, SPREAD..." required></label>
+          <label>Tipo de apuesta:
+            <select id="ind_betTarget">
+              <option value="jugador">Jugador</option>
+              <option value="equipo">Equipo</option>
+            </select>
+          </label>
 
-          <div id="ind_stats_section">
-            <label>Catálogo:
+          <label>Nombre: <input type="text" id="ind_team" placeholder="Nombre del jugador o equipo" required></label>
+
+          <label>Catálogo:
+            <select id="ind_type">
+              <option value="ML">MoneyLine (ML)</option>
+              <option value="SPREAD">Spread</option>
+              <option value="TOTALES">Totales</option>
+              <option value="ALT">Alternativa (ALT)</option>
+            </select>
+          </label>
+
+          <div id="ind_stats_section" style="display:none;">
+            <label>Estadística del jugador:
               <select id="ind_statCategory">
                 <option value="puntos">Puntos</option>
                 <option value="rebotes">Rebotes</option>
@@ -53,7 +68,7 @@
                 <option value="triples">Triples anotados</option>
               </select>
             </label>
-            <label>Línea del jugador: <input type="number" id="ind_statLine" required></label>
+            <label>Línea del jugador: <input type="number" step="0.5" id="ind_statLine"></label>
           </div>
 
           <label>Momio (odds): <input type="number" id="ind_odds" required></label>
@@ -82,10 +97,27 @@
 
           <h3>Añadir pick al parley</h3>
           <label>Deporte: <input type="text" id="pick_sport" placeholder="NBA" ></label>
-          <label>Equipo/Jugador: <input type="text" id="pick_team"></label>
-          <label>Tipo (ML, ALT...): <input type="text" id="pick_type"></label>
-          <div id="pick_stats_section">
-            <label>Catálogo:
+          
+          <label>Tipo de apuesta:
+            <select id="pick_betTarget">
+              <option value="jugador">Jugador</option>
+              <option value="equipo">Equipo</option>
+            </select>
+          </label>
+
+          <label>Nombre: <input type="text" id="pick_team" placeholder="Nombre del jugador o equipo"></label>
+
+          <label>Catálogo:
+            <select id="pick_type">
+              <option value="ML">MoneyLine (ML)</option>
+              <option value="SPREAD">Spread</option>
+              <option value="TOTALES">Totales</option>
+              <option value="ALT">Alternativa (ALT)</option>
+            </select>
+          </label>
+
+          <div id="pick_stats_section" style="display:none;">
+            <label>Estadística del jugador:
               <select id="pick_statCategory">
                 <option value="puntos">Puntos</option>
                 <option value="rebotes">Rebotes</option>
@@ -97,7 +129,7 @@
                 <option value="triples">Triples anotados</option>
               </select>
             </label>
-            <label>Línea del pick: <input type="number" id="pick_statLine"></label>
+            <label>Línea del pick: <input type="number" step="0.5" id="pick_statLine"></label>
           </div>
           <label>Momio: <input type="number" id="pick_odds"></label>
           <label>Resultado:
@@ -223,13 +255,11 @@
       });
       document.getElementById('ind_cancel').addEventListener('click',()=>resetIndividualForm());
 
-      // Toggle stats section for individual bets based on bet type
-      const indType = document.getElementById('ind_type');
+      // Toggle stats section for individual bets based on bet target
+      const indBetTarget = document.getElementById('ind_betTarget');
       const indStatsSection = document.getElementById('ind_stats_section');
-      indType.addEventListener('input', ()=>{
-        const val = indType.value.toUpperCase();
-        // Hide stats if it's a team bet (ML, SPREAD, etc.)
-        if(val === 'ML' || val === 'MONEYLINE' || val === 'SPREAD' || val.includes('TEAM')){
+      indBetTarget.addEventListener('change', ()=>{
+        if(indBetTarget.value === 'equipo'){
           indStatsSection.style.display = 'none';
         } else {
           indStatsSection.style.display = 'block';
@@ -242,12 +272,11 @@
       document.getElementById('parleyForm').addEventListener('submit', e=>{e.preventDefault();saveParley();});
       document.getElementById('par_cancel').addEventListener('click', ()=>{tempPicks=[];renderPicks();resetParleyForm();});
 
-      // Toggle stats section for picks based on bet type
-      const pickType = document.getElementById('pick_type');
+      // Toggle stats section for picks based on bet target
+      const pickBetTarget = document.getElementById('pick_betTarget');
       const pickStatsSection = document.getElementById('pick_stats_section');
-      pickType.addEventListener('input', ()=>{
-        const val = pickType.value.toUpperCase();
-        if(val === 'ML' || val === 'MONEYLINE' || val === 'SPREAD' || val.includes('TEAM')){
+      pickBetTarget.addEventListener('change', ()=>{
+        if(pickBetTarget.value === 'equipo'){
           pickStatsSection.style.display = 'none';
         } else {
           pickStatsSection.style.display = 'block';
@@ -266,14 +295,16 @@
     // --- Individual logic ---
     function saveIndividual(){
       const id = document.getElementById('ind_id').value || uid();
+      const betTarget = document.getElementById('ind_betTarget').value;
       const bet = {
         id, type:'individual',
         date: document.getElementById('ind_date').value,
         sport: document.getElementById('ind_sport').value.trim(),
+        betTarget: betTarget,
         team: document.getElementById('ind_team').value.trim(),
-        bet_type: document.getElementById('ind_type').value.trim(),
-        statCategory: document.getElementById('ind_statCategory').value,
-        statLine: Number(document.getElementById('ind_statLine').value),
+        bet_type: document.getElementById('ind_type').value,
+        statCategory: betTarget === 'jugador' ? document.getElementById('ind_statCategory').value : null,
+        statLine: betTarget === 'jugador' ? Number(document.getElementById('ind_statLine').value) : null,
         odds: Number(document.getElementById('ind_odds').value),
         amount: Number(document.getElementById('ind_amount').value),
         result: document.getElementById('ind_result').value
@@ -290,14 +321,15 @@
       document.getElementById('ind_id').value='';
       document.getElementById('ind_date').value='';
       document.getElementById('ind_sport').value='';
+      document.getElementById('ind_betTarget').value='jugador';
       document.getElementById('ind_team').value='';
-      document.getElementById('ind_type').value='';
+      document.getElementById('ind_type').value='ML';
       document.getElementById('ind_statCategory').value='puntos';
       document.getElementById('ind_statLine').value='';
       document.getElementById('ind_odds').value='';
       document.getElementById('ind_amount').value='';
       document.getElementById('ind_result').value='GANADA';
-      document.getElementById('ind_stats_section').style.display = 'block';
+      document.getElementById('ind_stats_section').style.display = 'none';
     }
 
     function editIndividual(id){
@@ -307,8 +339,9 @@
       document.getElementById('ind_id').value=b.id;
       document.getElementById('ind_date').value=b.date;
       document.getElementById('ind_sport').value=b.sport;
+      document.getElementById('ind_betTarget').value=b.betTarget||'jugador';
       document.getElementById('ind_team').value=b.team;
-      document.getElementById('ind_type').value=b.bet_type;
+      document.getElementById('ind_type').value=b.bet_type||'ML';
       document.getElementById('ind_statCategory').value=b.statCategory||'puntos';
       document.getElementById('ind_statLine').value=b.statLine||'';
       document.getElementById('ind_odds').value=b.odds||'';
@@ -316,8 +349,7 @@
       document.getElementById('ind_result').value=b.result||'GANADA';
       
       // Check if stats section should be visible
-      const val = b.bet_type.toUpperCase();
-      if(val === 'ML' || val === 'MONEYLINE' || val === 'SPREAD' || val.includes('TEAM')){
+      if(b.betTarget === 'equipo'){
         document.getElementById('ind_stats_section').style.display = 'none';
       } else {
         document.getElementById('ind_stats_section').style.display = 'block';
@@ -328,17 +360,19 @@
 
     // --- Parley logic ---
     function addPick(){
+      const betTarget = document.getElementById('pick_betTarget').value;
       const pick = {
         id: uid(),
         sport: document.getElementById('pick_sport').value.trim(),
+        betTarget: betTarget,
         team: document.getElementById('pick_team').value.trim(),
-        bet_type: document.getElementById('pick_type').value.trim(),
-        statCategory: document.getElementById('pick_statCategory').value,
-        statLine: Number(document.getElementById('pick_statLine').value)||null,
+        bet_type: document.getElementById('pick_type').value,
+        statCategory: betTarget === 'jugador' ? document.getElementById('pick_statCategory').value : null,
+        statLine: betTarget === 'jugador' ? (Number(document.getElementById('pick_statLine').value)||null) : null,
         odds: Number(document.getElementById('pick_odds').value)||null,
         result: document.getElementById('pick_result').value
       };
-      if(!pick.team || !pick.sport) { alert('Falta deporte o equipo del pick'); return; }
+      if(!pick.team || !pick.sport) { alert('Falta deporte o nombre'); return; }
       tempPicks.push(pick);
       renderPicks();
       clearPickInputs();
@@ -346,20 +380,22 @@
 
     function clearPickInputs(){
       document.getElementById('pick_sport').value='';
+      document.getElementById('pick_betTarget').value='jugador';
       document.getElementById('pick_team').value='';
-      document.getElementById('pick_type').value='';
+      document.getElementById('pick_type').value='ML';
       document.getElementById('pick_statCategory').value='puntos';
       document.getElementById('pick_statLine').value='';
       document.getElementById('pick_odds').value='';
       document.getElementById('pick_result').value='GANADA';
-      document.getElementById('pick_stats_section').style.display = 'block';
+      document.getElementById('pick_stats_section').style.display = 'none';
     }
 
     function renderPicks(){
       picksList.innerHTML='';
       tempPicks.forEach((p,i)=>{
         const li = document.createElement('li');
-        li.innerHTML = `${p.sport} - ${p.team} (${p.bet_type||''}) [${p.statCategory||''} ${p.statLine||''}] - ${p.result} <span class="muted">odds:${p.odds||'-'}</span> <span class="actions"><button onclick="editPick('${p.id}')">Editar</button><button onclick="removePick('${p.id}')">Eliminar</button></span>`;
+        const statsInfo = p.betTarget === 'jugador' && p.statCategory ? `[${p.statCategory} ${p.statLine||''}]` : '';
+        li.innerHTML = `${p.sport} - ${p.team} (${p.betTarget}) ${p.bet_type} ${statsInfo} - ${p.result} <span class="muted">odds:${p.odds||'-'}</span> <span class="actions"><button onclick="editPick('${p.id}')">Editar</button><button onclick="removePick('${p.id}')">Eliminar</button></span>`;
         picksList.appendChild(li);
       });
       pickCount.textContent = tempPicks.length;
@@ -369,16 +405,16 @@
       const p = tempPicks.find(x=>x.id===id);
       if(!p) return;
       document.getElementById('pick_sport').value=p.sport;
+      document.getElementById('pick_betTarget').value=p.betTarget||'jugador';
       document.getElementById('pick_team').value=p.team;
-      document.getElementById('pick_type').value=p.bet_type;
+      document.getElementById('pick_type').value=p.bet_type||'ML';
       document.getElementById('pick_statCategory').value=p.statCategory||'puntos';
       document.getElementById('pick_statLine').value=p.statLine||'';
       document.getElementById('pick_odds').value=p.odds||'';
       document.getElementById('pick_result').value=p.result||'GANADA';
       
       // Check if stats section should be visible
-      const val = p.bet_type.toUpperCase();
-      if(val === 'ML' || val === 'MONEYLINE' || val === 'SPREAD' || val.includes('TEAM')){
+      if(p.betTarget === 'equipo'){
         document.getElementById('pick_stats_section').style.display = 'none';
       } else {
         document.getElementById('pick_stats_section').style.display = 'block';
@@ -444,7 +480,16 @@
       const bets = getBets();
       bets.forEach(b=>{
         const tr = document.createElement('tr');
-        const detail = (b.type==='individual') ? `${b.team} (${b.bet_type}) [${b.statCategory||''} ${b.statLine||''}] odds:${b.odds}` : b.picks.map(p=>`${p.sport}-${p.team} (${p.bet_type||''}) [${p.statCategory||''} ${p.statLine||''}]`).join('<br>');
+        let detail = '';
+        if(b.type==='individual'){
+          const statsInfo = b.betTarget === 'jugador' && b.statCategory ? `[${b.statCategory} ${b.statLine||''}]` : '';
+          detail = `${b.team} (${b.betTarget}) ${b.bet_type} ${statsInfo} odds:${b.odds}`;
+        } else {
+          detail = b.picks.map(p=>{
+            const statsInfo = p.betTarget === 'jugador' && p.statCategory ? `[${p.statCategory} ${p.statLine||''}]` : '';
+            return `${p.sport}-${p.team} (${p.betTarget}) ${p.bet_type} ${statsInfo}`;
+          }).join('<br>');
+        }
         tr.innerHTML = `<td>${b.date||'-'}</td><td>${b.type}</td><td>${detail}</td><td>${b.amount||'-'}</td><td>${b.result||'-'}</td><td class="actions"></td>`;
         tbody.appendChild(tr);
         const actions = tr.querySelector('.actions');
