@@ -80,22 +80,43 @@
           <h3>Añadir pick al parley</h3>
           <label>Deporte: <input type="text" id="pick_sport" placeholder="NBA" ></label>
           <label>Equipo/Jugador: <input type="text" id="pick_team"></label>
-          <label>Tipo (ML, ALT...): <input type="text" id="pick_type"></label>
-          <label>Catálogo:
-            <select id="pick_statCategory">
-              <option value="puntos">Puntos</option>
-              <option value="rebotes">Rebotes</option>
-              <option value="asistencias">Asistencias</option>
-              <option value="puntos_asistencias">Puntos + Asistencias</option>
-              <option value="puntos_rebotes">Puntos + Rebotes</option>
-              <option value="rebotes_asistencias">Rebotes + Asistencias</option>
-              <option value="puntos_rebotes_asistencias">Puntos + Rebotes + Asistencias</option>
-              <option value="triples">Triples anotados</option>
-            </select>
-          </label>
-          <label>Línea del pick: <input type="number" id="pick_statLine"></label>
-          <label>Momio: <input type="number" id="pick_odds"></label>
-          <label>Resultado:
+
+<label>Tipo de selección:
+  <select id="pick_selectionType">
+    <option value="jugador">Jugador</option>
+    <option value="equipo">Equipo</option>
+  </select>
+</label>
+
+<div id="pick_jugadorCatalogo">
+  <label>Catálogo:
+    <select id="pick_statCategory">
+      <option value="puntos">Puntos</option>
+      <option value="rebotes">Rebotes</option>
+      <option value="asistencias">Asistencias</option>
+      <option value="puntos_asistencias">Puntos + Asistencias</option>
+      <option value="puntos_rebotes">Puntos + Rebotes</option>
+      <option value="rebotes_asistencias">Rebotes + Asistencias</option>
+      <option value="puntos_rebotes_asistencias">Puntos + Rebotes + Asistencias</option>
+      <option value="triples">Triples anotados</option>
+    </select>
+  </label>
+
+  <label>Línea del pick: <input type="number" id="pick_statLine"></label>
+</div>
+
+<div id="pick_equipoCatalogo" style="display:none;">
+  <label>Tipo (ML, Spread, Total):
+    <select id="pick_teamCategory">
+      <option value="ml">ML</option>
+      <option value="spread">Spread</option>
+      <option value="total">Total de puntos/goles</option>
+    </select>
+  </label>
+</div>
+
+<label>Momio: <input type="number" id="pick_odds"></label>
+<label>Resultado:
             <select id="pick_result">
               <option value="GANADA">GANADA</option>
               <option value="PERDIDA">PERDIDA</option>
@@ -496,3 +517,4 @@
   </script>
 </body>
 </html>
+
