@@ -24,6 +24,7 @@
     .badge{background:#eee;padding:2px 6px;border-radius:6px;font-size:12px}
   </style>
 </head>
+
 <body>
   <h1>Mi Historial de Apuestas (Completo)</h1>
   <p class="muted">Registro de apuestas individuales y parlays — editar, eliminar, estadísticas y gráficas.</p>
@@ -39,19 +40,21 @@
           <label>Equipo / Jugador: <input type="text" id="ind_team" required></label>
           <label>Tipo de apuesta: <input type="text" id="ind_type" placeholder="ML, ALT, SPREAD..." required></label>
 
-          <label>Catálogo:
-            <select id="ind_statCategory">
-              <option value="puntos">Puntos</option>
-              <option value="rebotes">Rebotes</option>
-              <option value="asistencias">Asistencias</option>
-              <option value="puntos_asistencias">Puntos + Asistencias</option>
-              <option value="puntos_rebotes">Puntos + Rebotes</option>
-              <option value="rebotes_asistencias">Rebotes + Asistencias</option>
-              <option value="puntos_rebotes_asistencias">Puntos + Rebotes + Asistencias</option>
-              <option value="triples">Triples anotados</option>
-            </select>
-          </label>
-          <label>Línea del jugador: <input type="number" id="ind_statLine" required></label>
+          <div id="ind_stats_section">
+            <label>Catálogo:
+              <select id="ind_statCategory">
+                <option value="puntos">Puntos</option>
+                <option value="rebotes">Rebotes</option>
+                <option value="asistencias">Asistencias</option>
+                <option value="puntos_asistencias">Puntos + Asistencias</option>
+                <option value="puntos_rebotes">Puntos + Rebotes</option>
+                <option value="rebotes_asistencias">Rebotes + Asistencias</option>
+                <option value="puntos_rebotes_asistencias">Puntos + Rebotes + Asistencias</option>
+                <option value="triples">Triples anotados</option>
+              </select>
+            </label>
+            <label>Línea del jugador: <input type="number" id="ind_statLine" required></label>
+          </div>
 
           <label>Momio (odds): <input type="number" id="ind_odds" required></label>
           <label>Monto: <input type="number" id="ind_amount" required></label>
@@ -80,43 +83,24 @@
           <h3>Añadir pick al parley</h3>
           <label>Deporte: <input type="text" id="pick_sport" placeholder="NBA" ></label>
           <label>Equipo/Jugador: <input type="text" id="pick_team"></label>
-
-<label>Tipo de selección:
-  <select id="pick_selectionType">
-    <option value="jugador">Jugador</option>
-    <option value="equipo">Equipo</option>
-  </select>
-</label>
-
-<div id="pick_jugadorCatalogo">
-  <label>Catálogo:
-    <select id="pick_statCategory">
-      <option value="puntos">Puntos</option>
-      <option value="rebotes">Rebotes</option>
-      <option value="asistencias">Asistencias</option>
-      <option value="puntos_asistencias">Puntos + Asistencias</option>
-      <option value="puntos_rebotes">Puntos + Rebotes</option>
-      <option value="rebotes_asistencias">Rebotes + Asistencias</option>
-      <option value="puntos_rebotes_asistencias">Puntos + Rebotes + Asistencias</option>
-      <option value="triples">Triples anotados</option>
-    </select>
-  </label>
-
-  <label>Línea del pick: <input type="number" id="pick_statLine"></label>
-</div>
-
-<div id="pick_equipoCatalogo" style="display:none;">
-  <label>Tipo (ML, Spread, Total):
-    <select id="pick_teamCategory">
-      <option value="ml">ML</option>
-      <option value="spread">Spread</option>
-      <option value="total">Total de puntos/goles</option>
-    </select>
-  </label>
-</div>
-
-<label>Momio: <input type="number" id="pick_odds"></label>
-<label>Resultado:
+          <label>Tipo (ML, ALT...): <input type="text" id="pick_type"></label>
+          <div id="pick_stats_section">
+            <label>Catálogo:
+              <select id="pick_statCategory">
+                <option value="puntos">Puntos</option>
+                <option value="rebotes">Rebotes</option>
+                <option value="asistencias">Asistencias</option>
+                <option value="puntos_asistencias">Puntos + Asistencias</option>
+                <option value="puntos_rebotes">Puntos + Rebotes</option>
+                <option value="rebotes_asistencias">Rebotes + Asistencias</option>
+                <option value="puntos_rebotes_asistencias">Puntos + Rebotes + Asistencias</option>
+                <option value="triples">Triples anotados</option>
+              </select>
+            </label>
+            <label>Línea del pick: <input type="number" id="pick_statLine"></label>
+          </div>
+          <label>Momio: <input type="number" id="pick_odds"></label>
+          <label>Resultado:
             <select id="pick_result">
               <option value="GANADA">GANADA</option>
               <option value="PERDIDA">PERDIDA</option>
@@ -170,6 +154,14 @@
         <table>
           <thead><tr><th>Fallos en el parley</th><th>Conteo</th></tr></thead>
           <tbody id="parley-fail-table"></tbody>
+        </table>
+      </div>
+
+      <div class="box" style="margin-top:12px">
+        <h3>💰 Ganancias/Pérdidas por Mes</h3>
+        <table id="monthly_table">
+          <thead><tr><th>Mes</th><th>Ganadas</th><th>Perdidas</th><th>Balance</th><th>ROI</th></tr></thead>
+          <tbody></tbody>
         </table>
       </div>
     </div>
@@ -231,11 +223,36 @@
       });
       document.getElementById('ind_cancel').addEventListener('click',()=>resetIndividualForm());
 
+      // Toggle stats section for individual bets based on bet type
+      const indType = document.getElementById('ind_type');
+      const indStatsSection = document.getElementById('ind_stats_section');
+      indType.addEventListener('input', ()=>{
+        const val = indType.value.toUpperCase();
+        // Hide stats if it's a team bet (ML, SPREAD, etc.)
+        if(val === 'ML' || val === 'MONEYLINE' || val === 'SPREAD' || val.includes('TEAM')){
+          indStatsSection.style.display = 'none';
+        } else {
+          indStatsSection.style.display = 'block';
+        }
+      });
+
       // Parley form
       document.getElementById('add_pick').addEventListener('click', addPick);
       document.getElementById('clear_picks').addEventListener('click', ()=>{tempPicks=[];renderPicks();});
       document.getElementById('parleyForm').addEventListener('submit', e=>{e.preventDefault();saveParley();});
       document.getElementById('par_cancel').addEventListener('click', ()=>{tempPicks=[];renderPicks();resetParleyForm();});
+
+      // Toggle stats section for picks based on bet type
+      const pickType = document.getElementById('pick_type');
+      const pickStatsSection = document.getElementById('pick_stats_section');
+      pickType.addEventListener('input', ()=>{
+        const val = pickType.value.toUpperCase();
+        if(val === 'ML' || val === 'MONEYLINE' || val === 'SPREAD' || val.includes('TEAM')){
+          pickStatsSection.style.display = 'none';
+        } else {
+          pickStatsSection.style.display = 'block';
+        }
+      });
 
       // Search
       document.getElementById('search_btn').addEventListener('click', ()=>{
@@ -280,6 +297,7 @@
       document.getElementById('ind_odds').value='';
       document.getElementById('ind_amount').value='';
       document.getElementById('ind_result').value='GANADA';
+      document.getElementById('ind_stats_section').style.display = 'block';
     }
 
     function editIndividual(id){
@@ -296,6 +314,15 @@
       document.getElementById('ind_odds').value=b.odds||'';
       document.getElementById('ind_amount').value=b.amount||'';
       document.getElementById('ind_result').value=b.result||'GANADA';
+      
+      // Check if stats section should be visible
+      const val = b.bet_type.toUpperCase();
+      if(val === 'ML' || val === 'MONEYLINE' || val === 'SPREAD' || val.includes('TEAM')){
+        document.getElementById('ind_stats_section').style.display = 'none';
+      } else {
+        document.getElementById('ind_stats_section').style.display = 'block';
+      }
+      
       window.scrollTo(0,0);
     }
 
@@ -325,6 +352,7 @@
       document.getElementById('pick_statLine').value='';
       document.getElementById('pick_odds').value='';
       document.getElementById('pick_result').value='GANADA';
+      document.getElementById('pick_stats_section').style.display = 'block';
     }
 
     function renderPicks(){
@@ -347,6 +375,15 @@
       document.getElementById('pick_statLine').value=p.statLine||'';
       document.getElementById('pick_odds').value=p.odds||'';
       document.getElementById('pick_result').value=p.result||'GANADA';
+      
+      // Check if stats section should be visible
+      const val = p.bet_type.toUpperCase();
+      if(val === 'ML' || val === 'MONEYLINE' || val === 'SPREAD' || val.includes('TEAM')){
+        document.getElementById('pick_stats_section').style.display = 'none';
+      } else {
+        document.getElementById('pick_stats_section').style.display = 'block';
+      }
+      
       // remove original so saving acts as update
       tempPicks = tempPicks.filter(x=>x.id!==id);
       renderPicks();
@@ -400,7 +437,7 @@
     }
 
     // --- Rendering full table ---
-    function renderAll(){ renderFullTable(); updateDashboard(); renderSportPerformance(); renderPlayersChart(); renderParleyFailTable(); }
+    function renderAll(){ renderFullTable(); updateDashboard(); renderSportPerformance(); renderPlayersChart(); renderParleyFailTable(); renderMonthlyTable(); }
 
     function renderFullTable(){
       const tbody = document.querySelector('#bets_table_full tbody'); tbody.innerHTML='';
@@ -489,8 +526,8 @@
       const ctx = document.getElementById('playersChart').getContext('2d');
       if(playersChart) playersChart.destroy();
       playersChart = new Chart(ctx,{
-        type:'bar', data:{labels, datasets:[{label:'Ganadas',data:wins},{label:'Perdidas',data:losses}]},
-        options:{responsive:true, scales:{x:{stacked:true}, y:{stacked:true, beginAtZero:true}}}
+        type:'bar', data:{labels, datasets:[{label:'Ganadas',data:wins,backgroundColor:'#4caf50'},{label:'Perdidas',data:losses,backgroundColor:'#f44336'}]},
+        options:{responsive:true,maintainAspectRatio:true, scales:{x:{stacked:true}, y:{stacked:true, beginAtZero:true}}}
       });
     }
 
@@ -506,10 +543,59 @@
       Object.keys(counts).forEach(k=>{ const tr=document.createElement('tr'); tr.innerHTML=`<td>${k}</td><td>${counts[k]}</td>`; tbody.appendChild(tr); });
     }
 
-    // --- Edit helpers for picks within saved parley: open parley then allow edit via tempPicks ---
-    // already handled by editParley which populates tempPicks and form
+    // --- Monthly profit/loss table ---
+    function renderMonthlyTable(){
+      const bets = getBets();
+      const monthly = {}; // 'YYYY-MM' -> {invested, returned}
+      
+      bets.forEach(b=>{
+        if(!b.date || !b.amount) return;
+        const month = b.date.substring(0,7); // Extract YYYY-MM
+        if(!monthly[month]) monthly[month] = {invested:0, returned:0};
+        
+        monthly[month].invested += b.amount;
+        
+        if(b.result === 'GANADA'){
+          if(b.type === 'individual'){
+            // Return = amount + (amount * odds)
+            const profit = b.amount * (b.odds || 0);
+            monthly[month].returned += b.amount + profit;
+          } else if(b.type === 'parley'){
+            // For parley, calculate combined odds
+            let combinedOdds = 1;
+            b.picks.forEach(p=>{
+              if(p.odds) combinedOdds *= (p.odds > 0 ? (p.odds/100 + 1) : (1 + 100/Math.abs(p.odds)));
+            });
+            const profit = b.amount * (combinedOdds - 1);
+            monthly[month].returned += b.amount + profit;
+          }
+        }
+        // If PERDIDA, returned stays 0 for that bet
+      });
 
-    // --- Utility: remove bet by id already defined
+      const tbody = document.querySelector('#monthly_table tbody');
+      tbody.innerHTML = '';
+      
+      // Sort months descending
+      const months = Object.keys(monthly).sort().reverse();
+      
+      months.forEach(m=>{
+        const data = monthly[m];
+        const balance = data.returned - data.invested;
+        const roi = data.invested > 0 ? ((balance / data.invested) * 100).toFixed(1) : '0.0';
+        const balanceColor = balance >= 0 ? 'green' : 'red';
+        
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${m}</td>
+          <td style="color:green">${data.returned.toFixed(2)}</td>
+          <td style="color:red">${data.invested.toFixed(2)}</td>
+          <td style="color:${balanceColor}"><b>${balance.toFixed(2)}</b></td>
+          <td style="color:${balanceColor}">${roi}%</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
 
     // --- Expose some functions to window for inline onclick used in created elements ---
     window.editPick = editPick; window.removePick = removePick; window.editParley = editParley; window.editIndividual = editIndividual; window.deleteBet = deleteBet;
@@ -517,4 +603,3 @@
   </script>
 </body>
 </html>
-
