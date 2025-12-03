@@ -546,7 +546,7 @@
         } else {
           detail = b.picks.map(p=>{
             const statsInfo = p.betTarget === 'jugador' && p.statCategory ? `[${p.statCategory} ${p.statLine||''}]` : '';
-            return `${p.sport}-${p.team} (${p.betTarget}) ${p.bet_type} ${statsInfo}`;
+            return `${p.sport}-${p.team} (${p.betTarget}) ${p.bet_type} ${statsInfo} odds:${p.odds||'-'}`;
           }).join('<br>');
         }
         tr.innerHTML = `<td>${b.date||'-'}</td><td>${b.type}</td><td>${detail}</td><td>${b.amount||'-'}</td><td>${b.result||'-'}</td><td class="actions"></td>`;
