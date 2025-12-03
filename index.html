@@ -182,6 +182,21 @@
         <label>Tipo de apuesta: <input id="search_type" placeholder="ML, ALT..."></label>
         <button id="search_btn">Buscar</button>
         <p id="search_output"></p>
+        <div id="search_results" style="margin-top:12px;display:none;">
+          <h4>Apuestas encontradas:</h4>
+          <table style="width:100%;border-collapse:collapse;margin-top:8px;font-size:12px;">
+            <thead>
+              <tr>
+                <th style="border:1px solid #ddd;padding:4px;background:#f1f1f1;">Fecha</th>
+                <th style="border:1px solid #ddd;padding:4px;background:#f1f1f1;">Tipo</th>
+                <th style="border:1px solid #ddd;padding:4px;background:#f1f1f1;">Detalle</th>
+                <th style="border:1px solid #ddd;padding:4px;background:#f1f1f1;">Monto</th>
+                <th style="border:1px solid #ddd;padding:4px;background:#f1f1f1;">Resultado</th>
+              </tr>
+            </thead>
+            <tbody id="search_results_body"></tbody>
+          </table>
+        </div>
       </div>
 
       <div class="box" style="margin-top:12px">
@@ -317,8 +332,9 @@
       document.getElementById('search_btn').addEventListener('click', ()=>{
         const team = document.getElementById('search_team').value.trim();
         const type = document.getElementById('search_type').value.trim();
-        const count = countAppearances(team,type);
-        document.getElementById('search_output').textContent = `Apareció ${count} veces (incluyendo picks dentro de parlays).`;
+        const results = findAppearances(team,type);
+        document.getElementById('search_output').textContent = `Apareció ${results.count} veces (incluyendo picks dentro de parlays).`;
+        renderSearchResults(results.bets);
       });
     }
 
@@ -529,6 +545,68 @@
         }
       });
       return cnt;
+    }
+
+    // --- Find appearances and return bets with matching picks ---
+    function findAppearances(team,type){
+      const bets = getBets();
+      const foundBets = [];
+      let count = 0;
+      
+      bets.forEach(b=>{
+        if(b.type==='individual'){
+          if(b.team===team && b.bet_type===type){
+            count++;
+            foundBets.push(b);
+          }
+        } else if(b.type==='parley'){
+          // Check if any pick matches
+          const matchingPicks = b.picks.filter(p=> p.team===team && p.bet_type===type);
+          if(matchingPicks.length > 0){
+            count += matchingPicks.length;
+            // Include the full parley bet so we can show all its details
+            foundBets.push(b);
+          }
+        }
+      });
+      
+      return {count, bets: foundBets};
+    }
+
+    // --- Render search results ---
+    function renderSearchResults(bets){
+      const resultsDiv = document.getElementById('search_results');
+      const tbody = document.getElementById('search_results_body');
+      
+      if(bets.length === 0){
+        resultsDiv.style.display = 'none';
+        return;
+      }
+      
+      resultsDiv.style.display = 'block';
+      tbody.innerHTML = '';
+      
+      bets.forEach(b=>{
+        const tr = document.createElement('tr');
+        let detail = '';
+        if(b.type==='individual'){
+          const statsInfo = b.betTarget === 'jugador' && b.statCategory ? `[${b.statCategory} ${b.statLine||''}]` : '';
+          detail = `${b.team} (${b.betTarget}) ${b.bet_type} ${statsInfo} odds:${b.odds}`;
+        } else {
+          detail = b.picks.map(p=>{
+            const statsInfo = p.betTarget === 'jugador' && p.statCategory ? `[${p.statCategory} ${p.statLine||''}]` : '';
+            return `${p.sport}-${p.team} (${p.betTarget}) ${p.bet_type} ${statsInfo} odds:${p.odds||'-'}`;
+          }).join('<br>');
+        }
+        tr.innerHTML = `
+          <td style="border:1px solid #ddd;padding:4px;">${b.date||'-'}</td>
+          <td style="border:1px solid #ddd;padding:4px;">${b.type}</td>
+          <td style="border:1px solid #ddd;padding:4px;">${detail}</td>
+          <td style="border:1px solid #ddd;padding:4px;">${b.amount||'-'}</td>
+          <td style="border:1px solid #ddd;padding:4px;">${b.result||'-'}</td>
+        `;
+        tbody.appendChild(tr);
+      });
     }
 
     // --- Rendering full table ---
