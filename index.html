@@ -660,18 +660,25 @@
         monthly[month].invested += b.amount;
         
         if(b.result === 'GANADA'){
-          if(b.type === 'individual'){
-            // Return = amount + (amount * odds)
-            const profit = b.amount * (b.odds || 0);
-            monthly[month].returned += b.amount + profit;
-          } else if(b.type === 'parley'){
-            // For parley, calculate combined odds
-            let combinedOdds = 1;
-            b.picks.forEach(p=>{
-              if(p.odds) combinedOdds *= (p.odds > 0 ? (p.odds/100 + 1) : (1 + 100/Math.abs(p.odds)));
-            });
-            const profit = b.amount * (combinedOdds - 1);
-            monthly[month].returned += b.amount + profit;
+          // Si hay winnings registrados manualmente, usarlos; si no, calcular basado en odds
+          if(b.winnings && b.winnings > 0){
+            // Usar el valor de winnings registrado manualmente
+            monthly[month].returned += b.amount + b.winnings;
+          } else {
+            // Calcular basado en odds (comportamiento anterior)
+            if(b.type === 'individual'){
+              // Return = amount + (amount * odds)
+              const profit = b.amount * (b.odds || 0);
+              monthly[month].returned += b.amount + profit;
+            } else if(b.type === 'parley'){
+              // For parley, calculate combined odds
+              let combinedOdds = 1;
+              b.picks.forEach(p=>{
+                if(p.odds) combinedOdds *= (p.odds > 0 ? (p.odds/100 + 1) : (1 + 100/Math.abs(p.odds)));
+              });
+              const profit = b.amount * (combinedOdds - 1);
+              monthly[month].returned += b.amount + profit;
+            }
           }
         }
         // If PERDIDA, returned stays 0 for that bet
