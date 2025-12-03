@@ -81,6 +81,10 @@
             </select>
           </label>
 
+          <div id="ind_winnings_section" style="display:none;">
+            <label>💰 Ganancia obtenida: <input type="number" step="0.01" id="ind_winnings" placeholder="Cuánto ganaste"></label>
+          </div>
+
           <div class="flex">
             <button type="submit">Guardar Individual</button>
             <button type="button" id="ind_cancel">Cancelar</button>
@@ -152,6 +156,10 @@
               <option value="PERDIDA">PERDIDA</option>
             </select>
           </label>
+
+          <div id="par_winnings_section" style="display:none;">
+            <label>💰 Ganancia obtenida: <input type="number" step="0.01" id="par_winnings" placeholder="Cuánto ganaste"></label>
+          </div>
 
           <div class="flex" style="margin-top:8px">
             <button type="submit">Guardar Parley</button>
@@ -266,6 +274,17 @@
         }
       });
 
+      // Toggle winnings section for individual bets
+      const indResult = document.getElementById('ind_result');
+      const indWinningsSection = document.getElementById('ind_winnings_section');
+      indResult.addEventListener('change', ()=>{
+        if(indResult.value === 'GANADA'){
+          indWinningsSection.style.display = 'block';
+        } else {
+          indWinningsSection.style.display = 'none';
+        }
+      });
+
       // Parley form
       document.getElementById('add_pick').addEventListener('click', addPick);
       document.getElementById('clear_picks').addEventListener('click', ()=>{tempPicks=[];renderPicks();});
@@ -283,6 +302,17 @@
         }
       });
 
+      // Toggle winnings section for parley
+      const parResult = document.getElementById('par_result');
+      const parWinningsSection = document.getElementById('par_winnings_section');
+      parResult.addEventListener('change', ()=>{
+        if(parResult.value === 'GANADA'){
+          parWinningsSection.style.display = 'block';
+        } else {
+          parWinningsSection.style.display = 'none';
+        }
+      });
+
       // Search
       document.getElementById('search_btn').addEventListener('click', ()=>{
         const team = document.getElementById('search_team').value.trim();
@@ -296,6 +326,7 @@
     function saveIndividual(){
       const id = document.getElementById('ind_id').value || uid();
       const betTarget = document.getElementById('ind_betTarget').value;
+      const result = document.getElementById('ind_result').value;
       const bet = {
         id, type:'individual',
         date: document.getElementById('ind_date').value,
@@ -307,7 +338,8 @@
         statLine: betTarget === 'jugador' ? Number(document.getElementById('ind_statLine').value) : null,
         odds: Number(document.getElementById('ind_odds').value),
         amount: Number(document.getElementById('ind_amount').value),
-        result: document.getElementById('ind_result').value
+        result: result,
+        winnings: result === 'GANADA' ? (Number(document.getElementById('ind_winnings').value) || 0) : 0
       };
       const bets = getBets();
       const existing = bets.findIndex(b=>b.id===id);
@@ -329,7 +361,9 @@
       document.getElementById('ind_odds').value='';
       document.getElementById('ind_amount').value='';
       document.getElementById('ind_result').value='GANADA';
+      document.getElementById('ind_winnings').value='';
       document.getElementById('ind_stats_section').style.display = 'none';
+      document.getElementById('ind_winnings_section').style.display = 'none';
     }
 
     function editIndividual(id){
@@ -347,12 +381,20 @@
       document.getElementById('ind_odds').value=b.odds||'';
       document.getElementById('ind_amount').value=b.amount||'';
       document.getElementById('ind_result').value=b.result||'GANADA';
+      document.getElementById('ind_winnings').value=b.winnings||'';
       
       // Check if stats section should be visible
       if(b.betTarget === 'equipo'){
         document.getElementById('ind_stats_section').style.display = 'none';
       } else {
         document.getElementById('ind_stats_section').style.display = 'block';
+      }
+
+      // Check if winnings section should be visible
+      if(b.result === 'GANADA'){
+        document.getElementById('ind_winnings_section').style.display = 'block';
+      } else {
+        document.getElementById('ind_winnings_section').style.display = 'none';
       }
       
       window.scrollTo(0,0);
@@ -430,11 +472,13 @@
     function saveParley(){
       const id = document.getElementById('par_id').value || uid();
       if(tempPicks.length===0){ alert('Agrega al menos un pick al parley'); return; }
+      const result = document.getElementById('par_result').value;
       const par = {
         id, type:'parley', date:document.getElementById('par_date').value,
         amount: Number(document.getElementById('par_amount').value)||0,
         picks: tempPicks.slice(),
-        result: document.getElementById('par_result').value
+        result: result,
+        winnings: result === 'GANADA' ? (Number(document.getElementById('par_winnings').value) || 0) : 0
       };
       const bets = getBets();
       const idx = bets.findIndex(b=>b.id===id);
@@ -448,12 +492,27 @@
       document.getElementById('par_date').value='';
       document.getElementById('par_amount').value='';
       document.getElementById('par_result').value='GANADA';
+      document.getElementById('par_winnings').value='';
+      document.getElementById('par_winnings_section').style.display = 'none';
     }
 
     function editParley(id){
       const bets = getBets(); const p = bets.find(b=>b.id===id && b.type==='parley');
       if(!p) return; editingParleyId = id; tempPicks = p.picks.map(x=>Object.assign({},x)); renderPicks();
-      document.getElementById('par_id').value=p.id; document.getElementById('par_date').value=p.date; document.getElementById('par_amount').value=p.amount; document.getElementById('par_result').value=p.result; window.scrollTo(0,0);
+      document.getElementById('par_id').value=p.id; 
+      document.getElementById('par_date').value=p.date; 
+      document.getElementById('par_amount').value=p.amount; 
+      document.getElementById('par_result').value=p.result;
+      document.getElementById('par_winnings').value=p.winnings||'';
+
+      // Check if winnings section should be visible
+      if(p.result === 'GANADA'){
+        document.getElementById('par_winnings_section').style.display = 'block';
+      } else {
+        document.getElementById('par_winnings_section').style.display = 'none';
+      }
+      
+      window.scrollTo(0,0);
     }
 
     // --- Delete functions ---
