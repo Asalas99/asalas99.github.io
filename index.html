@@ -179,7 +179,6 @@
 
         <h3>Buscar cuántas veces incluí una apuesta individual (también en parlays)</h3>
         <label>Equipo/Jugador: <input id="search_team" placeholder="Nombre"></label>
-        <label>Tipo de apuesta: <input id="search_type" placeholder="ML, ALT..."></label>
         <button id="search_btn">Buscar</button>
         <p id="search_output"></p>
         <div id="search_results" style="margin-top:12px;display:none;">
@@ -188,9 +187,11 @@
             <thead>
               <tr>
                 <th style="border:1px solid #ddd;padding:4px;background:#f1f1f1;">Fecha</th>
+                <th style="border:1px solid #ddd;padding:4px;background:#f1f1f1;">Deporte</th>
                 <th style="border:1px solid #ddd;padding:4px;background:#f1f1f1;">Tipo</th>
-                <th style="border:1px solid #ddd;padding:4px;background:#f1f1f1;">Detalle</th>
-                <th style="border:1px solid #ddd;padding:4px;background:#f1f1f1;">Monto</th>
+                <th style="border:1px solid #ddd;padding:4px;background:#f1f1f1;">Nombre</th>
+                <th style="border:1px solid #ddd;padding:4px;background:#f1f1f1;">Línea</th>
+                <th style="border:1px solid #ddd;padding:4px;background:#f1f1f1;">Momio</th>
                 <th style="border:1px solid #ddd;padding:4px;background:#f1f1f1;">Resultado</th>
               </tr>
             </thead>
@@ -331,10 +332,13 @@
       // Search
       document.getElementById('search_btn').addEventListener('click', ()=>{
         const team = document.getElementById('search_team').value.trim();
-        const type = document.getElementById('search_type').value.trim();
-        const results = findAppearances(team,type);
+        if(!team){
+          alert('Por favor ingresa un nombre para buscar');
+          return;
+        }
+        const results = findAppearances(team);
         document.getElementById('search_output').textContent = `Apareció ${results.count} veces (incluyendo picks dentro de parlays).`;
-        renderSearchResults(results.bets);
+        renderSearchResults(results.picks);
       });
     }
 
@@ -547,38 +551,62 @@
       return cnt;
     }
 
-    // --- Find appearances and return bets with matching picks ---
-    function findAppearances(team,type){
+    // --- Find appearances and return individual picks with matching name ---
+    function findAppearances(team){
       const bets = getBets();
-      const foundBets = [];
+      const foundPicks = [];
       let count = 0;
       
       bets.forEach(b=>{
         if(b.type==='individual'){
-          if(b.team===team && b.bet_type===type){
+          if(b.team===team){
             count++;
-            foundBets.push(b);
+            // Create a pick object with all the information
+            foundPicks.push({
+              date: b.date,
+              sport: b.sport,
+              betTarget: b.betTarget,
+              team: b.team,
+              bet_type: b.bet_type,
+              statCategory: b.statCategory,
+              statLine: b.statLine,
+              odds: b.odds,
+              result: b.result,
+              sourceType: 'individual'
+            });
           }
         } else if(b.type==='parley'){
-          // Check if any pick matches
-          const matchingPicks = b.picks.filter(p=> p.team===team && p.bet_type===type);
-          if(matchingPicks.length > 0){
-            count += matchingPicks.length;
-            // Include the full parley bet so we can show all its details
-            foundBets.push(b);
-          }
+          // Check if any pick matches by name only
+          b.picks.forEach(p=>{
+            if(p.team===team){
+              count++;
+              // Create a pick object with all the information from the pick
+              foundPicks.push({
+                date: b.date,
+                sport: p.sport,
+                betTarget: p.betTarget,
+                team: p.team,
+                bet_type: p.bet_type,
+                statCategory: p.statCategory,
+                statLine: p.statLine,
+                odds: p.odds,
+                result: p.result,
+                sourceType: 'parley'
+              });
+            }
+          });
         }
       });
       
-      return {count, bets: foundBets};
+      return {count, picks: foundPicks};
     }
 
     // --- Render search results ---
-    function renderSearchResults(bets){
+    function renderSearchResults(picks){
       const resultsDiv = document.getElementById('search_results');
       const tbody = document.getElementById('search_results_body');
       
-      if(bets.length === 0){
+      if(picks.length === 0){
         resultsDiv.style.display = 'none';
         return;
       }
@@ -586,24 +614,22 @@
       resultsDiv.style.display = 'block';
       tbody.innerHTML = '';
       
-      bets.forEach(b=>{
+      picks.forEach(pick=>{
         const tr = document.createElement('tr');
-        let detail = '';
-        if(b.type==='individual'){
-          const statsInfo = b.betTarget === 'jugador' && b.statCategory ? `[${b.statCategory} ${b.statLine||''}]` : '';
-          detail = `${b.team} (${b.betTarget}) ${b.bet_type} ${statsInfo} odds:${b.odds}`;
-        } else {
-          detail = b.picks.map(p=>{
-            const statsInfo = p.betTarget === 'jugador' && p.statCategory ? `[${p.statCategory} ${p.statLine||''}]` : '';
-            return `${p.sport}-${p.team} (${p.betTarget}) ${p.bet_type} ${statsInfo} odds:${p.odds||'-'}`;
-          }).join('<br>');
+        // Format the line information
+        let lineInfo = '-';
+        if(pick.betTarget === 'jugador' && pick.statCategory && pick.statLine){
+          lineInfo = `${pick.statCategory} ${pick.statLine}`;
         }
+        
         tr.innerHTML = `
-          <td style="border:1px solid #ddd;padding:4px;">${b.date||'-'}</td>
-          <td style="border:1px solid #ddd;padding:4px;">${b.type}</td>
-          <td style="border:1px solid #ddd;padding:4px;">${detail}</td>
-          <td style="border:1px solid #ddd;padding:4px;">${b.amount||'-'}</td>
-          <td style="border:1px solid #ddd;padding:4px;">${b.result||'-'}</td>
+          <td style="border:1px solid #ddd;padding:4px;">${pick.date||'-'}</td>
+          <td style="border:1px solid #ddd;padding:4px;">${pick.sport||'-'}</td>
+          <td style="border:1px solid #ddd;padding:4px;">${pick.betTarget||'-'} - ${pick.bet_type||'-'}</td>
+          <td style="border:1px solid #ddd;padding:4px;">${pick.team||'-'}</td>
+          <td style="border:1px solid #ddd;padding:4px;">${lineInfo}</td>
+          <td style="border:1px solid #ddd;padding:4px;">${pick.odds||'-'}</td>
+          <td style="border:1px solid #ddd;padding:4px;">${pick.result||'-'}</td>
         `;
         tbody.appendChild(tr);
       });
