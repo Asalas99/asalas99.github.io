@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Historial de Apuestas</title>
+    <style>
+        body { font-family: Arial; margin: 20px; background: #fafafa; }
+        .box { background: white; padding: 15px; margin: 15px 0; border-radius: 6px; border: 1px solid #ddd; }
+        input, select { padding: 5px; margin: 5px 0; width: 200px; }
+        button { padding: 7px 12px; margin-top: 10px; cursor: pointer; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #ccc; padding: 6px; }
+        th { background-color: #eee; }
+        pre { background: #eee; padding: 10px; }
+    </style>
+</head>
+
+<body>
+
+<h1>Mi Historial de Apuestas</h1>
+<p>Página personal para registrar apuestas individuales, parlays y analizar tus tendencias.</p>
+
+<!-- ----------------------------------------- -->
+<!-- FORMULARIO APOSTA INDIVIDUAL -->
+<!-- ----------------------------------------- -->
+<div class="box">
+    <h2>Apuesta Individual</h2>
+
+    <label>Fecha:</label><br>
+    <input type="date" id="ind_date"><br>
+
+    <label>Deporte:</label><br>
+    <input type="text" id="ind_sport"><br>
+
+    <label>Equipo / Jugador:</label><br>
+    <input type="text" id="ind_team"><br>
+
+    <label>Tipo:</label><br>
+    <input type="text" id="ind_type"><br>
+
+    <label>Momio:</label><br>
+    <input type="number" id="ind_odds"><br>
+
+    <label>Cantidad:</label><br>
+    <input type="number" id="ind_amount"><br>
+
+    <label>Resultado:</label><br>
+    <select id="ind_result">
+        <option value="GANADA">GANADA</option>
+        <option value="PERDIDA">PERDIDA</option>
+    </select><br>
+
+    <button onclick="addIndividualBet()">Guardar Apuesta Individual</button>
+</div>
+
+<!-- ----------------------------------------- -->
+<!-- FORMULARIO PARLEY -->
+<!-- ----------------------------------------- -->
+<div class="box">
+    <h2>Registrar Parley</h2>
+
+    <label>Fecha:</label><br>
+    <input type="date" id="par_date"><br>
+
+    <label>Cantidad apostada al parley:</label><br>
+    <input type="number" id="par_amount"><br>
+
+    <h3>Agregar Picks</h3>
+
+    <label>Deporte:</label><br>
+    <input type="text" id="pick_sport"><br>
+
+    <label>Equipo/Jugador:</label><br>
+    <input type="text" id="pick_team"><br>
+
+    <label>Tipo:</label><br>
+    <input type="text" id="pick_type"><br>
+
+    <label>Momio:</label><br>
+    <input type="number" id="pick_odds"><br>
+
+    <label>Resultado:</label><br>
+    <select id="pick_result">
+        <option value="GANADA">GANADA</option>
+        <option value="PERDIDA">PERDIDA</option>
+    </select><br>
+
+    <button onclick="addPickToParley()">Agregar pick al parley</button>
+
+    <h4>Picks añadidos:</h4>
+    <ul id="picks_list"></ul>
+
+    <label>Resultado del Parley:</label><br>
+    <select id="par_result">
+        <option value="GANADA">GANADA</option>
+        <option value="PERDIDA">PERDIDA</option>
+    </select>
+
+    <br><br>
+    <button onclick="saveParley()">Guardar Parley</button>
+</div>
+
+<!-- ----------------------------------------- -->
+<!-- DASHBOARD -->
+<!-- ----------------------------------------- -->
+<div class="box">
+    <h2>Dashboard de Estadísticas</h2>
+    <p><b>📅 Día con más ganancias:</b> <span id="best-day">-</span></p>
+    <p><b>🏆 Mejor deporte:</b> <span id="best-sport">-</span></p>
+
+    <h3>📊 Tendencias de Equipos/Jugadores</h3>
+    <pre id="team-trends">{}</pre>
+
+    <h3>🔍 Buscar cuántas veces hice una apuesta individual</h3>
+    Equipo/Jugador: <input type="text" id="search-team">  
+    Tipo: <input type="text" id="search-type">  
+    <button onclick="searchSingleBet()">Buscar</button>
+    <p id="search-result"></p>
+</div>
+
+<!-- ----------------------------------------- -->
+<!-- HISTORIAL COMPLETO -->
+<!-- ----------------------------------------- -->
+<div class="box">
+    <h2>Historial de Apuestas</h2>
+    <table id="bets-table">
+        <thead>
+            <tr>
+                <th>Fecha</th>
+                <th>Tipo</th>
+                <th>Detalle</th>
+                <th>Cantidad</th>
+                <th>Resultado</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+</div>
+
+<script>
+/* ----------------------------
+      LOCAL STORAGE HELPERS
+-----------------------------*/
+
+function getBets() {
+    return JSON.parse(localStorage.getItem("bets")) || [];
+}
+function saveBets(bets) {
+    localStorage.setItem("bets", JSON.stringify(bets));
+}
+
+/* ----------------------------
+      APUESTA INDIVIDUAL
+-----------------------------*/
+function addIndividualBet() {
+    const bet = {
+        type: "individual",
+        date: document.getElementById("ind_date").value,
+        sport: document.getElementById("ind_sport").value,
+        team: document.getElementById("ind_team").value,
+        bet_type: document.getElementById("ind_type").value,
+        odds: Number(document.getElementById("ind_odds").value),
+        amount: Number(document.getElementById("ind_amount").value),
+        result: document.getElementById("ind_result").value
+    };
+
+    if (!bet.date || !bet.sport || !bet.team || !bet.bet_type || !bet.odds || !bet.amount) {
+        alert("Faltan datos para registrar la apuesta.");
+        return;
+    }
+
+    const bets = getBets();
+    bets.push(bet);
+    saveBets(bets);
+
+    alert("Apuesta individual registrada.");
+    renderTable();
+    updateDashboard();
+}
+
+/* ----------------------------
+      PARLEY
+-----------------------------*/
+
+let parleyPicks = [];
+
+function addPickToParley() {
+    const pick = {
+        sport: document.getElementById("pick_sport").value,
+        team: document.getElementById("pick_team").value,
+        type: document.getElementById("pick_type").value,
+        odds: Number(document.getElementById("pick_odds").value),
+        result: document.getElementById("pick_result").value
+    };
+
+    if (!pick.sport || !pick.team || !pick.type || !pick.odds) {
+        alert("Faltan datos del pick.");
+        return;
+    }
+
+    parleyPicks.push(pick);
+    document.getElementById("picks_list").innerHTML += `<li>${pick.team} (${pick.type}) ${pick.odds}</li>`;
+}
+
+function saveParley() {
+    if (parleyPicks.length === 0) {
+        alert("Agrega al menos un pick.");
+        return;
+    }
+
+    const parley = {
+        type: "parley",
+        date: document.getElementById("par_date").value,
+        amount: Number(document.getElementById("par_amount").value),
+        picks: parleyPicks,
+        result: document.getElementById("par_result").value
+    };
+
+    const bets = getBets();
+    bets.push(parley);
+    saveBets(bets);
+
+    alert("Parley registrado.");
+    parleyPicks = [];
+    document.getElementById("picks_list").innerHTML = "";
+    renderTable();
+    updateDashboard();
+}
+
+/* ----------------------------
+      DASHBOARD ORIGINAL
+-----------------------------*/
+
+// Mejor día para apostar
+function bestDay() {
+    const bets = getBets();
+    const map = {};
+
+    bets.forEach(b => {
+        if (b.result === "GANADA") {
+            const day = new Date(b.date).toLocaleDateString("es-MX", { weekday: "long" });
+            map[day] = (map[day] || 0) + 1;
+        }
+    });
+
+    let best = "-";
+    let max = 0;
+
+    for (let d in map) {
+        if (map[d] > max) {
+            best = d;
+            max = map[d];
+        }
+    }
+
+    return best;
+}
+
+// Mejor deporte
+function bestSport() {
+    const bets = getBets();
+    const map = {};
+
+    bets.forEach(b => {
+        if (b.result === "GANADA") {
+            const sport = b.type === "individual" ? b.sport : null;
+
+            if (sport) map[sport] = (map[sport] || 0) + 1;
+
+            if (b.type === "parley") {
+                b.picks.forEach(pick => {
+                    map[pick.sport] = (map[pick.sport] || 0) + 1;
+                });
+            }
+        }
+    });
+
+    let best = "-";
+    let max = 0;
+
+    for (let s in map) {
+        if (map[s] > max) {
+            best = s;
+            max = map[s];
+        }
+    }
+
+    return best;
+}
+
+// Tendencias por equipo/jugador
+function teamTrends() {
+    const bets = getBets();
+    const trends = {};
+
+    bets.forEach(b => {
+        if (b.type === "individual") {
+            if (!trends[b.team]) {
+                trends[b.team] = { apuestas: 0, ganadas: 0, perdidas: 0 };
+            }
+            trends[b.team].apuestas++;
+            if (b.result === "GANADA") trends[b.team].ganadas++;
+            else trends[b.team].perdidas++;
+        }
+
+        if (b.type === "parley") {
+            b.picks.forEach(p => {
+                if (!trends[p.team]) {
+                    trends[p.team] = { apuestas: 0, ganadas: 0, perdidas: 0 };
+                }
+                trends[p.team].apuestas++;
+                if (p.result === "GANADA") trends[p.team].ganadas++;
+                else trends[p.team].perdidas++;
+            });
+        }
+    });
+
+    return trends;
+}
+
+// Buscar repeticiones individuales
+function searchSingleBet() {
+    const team = document.getElementById("search-team").value;
+    const type = document.getElementById("search-type").value;
+
+    const bets = getBets();
+    const count = bets.filter(b =>
+        b.type === "individual" &&
+        b.team === team &&
+        b.bet_type === type
+    ).length;
+
+    document.getElementById("search-result").textContent =
+        `Has hecho esta apuesta individual ${count} veces.`;
+}
+
+/* ----------------------------
+      TABLA
+-----------------------------*/
+function renderTable() {
+    const bets = getBets();
+    const tbody = document.querySelector("#bets-table tbody");
+
+    tbody.innerHTML = "";
+
+    bets.forEach(b => {
+        let detail = "";
+
+        if (b.type === "individual") {
+            detail = `${b.team} (${b.bet_type}) – Momio: ${b.odds}`;
+        } else {
+            detail = b.picks.map(p => `${p.team} ${p.type} (${p.odds})`).join("<br>");
+        }
+
+        tbody.innerHTML += `
+            <tr>
+                <td>${b.date}</td>
+                <td>${b.type}</td>
+                <td>${detail}</td>
+                <td>${b.amount}</td>
+                <td>${b.result}</td>
+            </tr>
+        `;
+    });
+}
+
+/* ----------------------------
+      ACTUALIZAR DASHBOARD
+-----------------------------*/
+function updateDashboard() {
+    document.getElementById("best-day").textContent = bestDay();
+    document.getElementById("best-sport").textContent = bestSport();
+    document.getElementById("team-trends").textContent = JSON.stringify(teamTrends(), null, 2);
+}
+
+renderTable();
+updateDashboard();
+</script>
+
+</body>
+</html>
